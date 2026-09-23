@@ -6,7 +6,7 @@ plugins {
 
 repositories { mavenCentral() }
 
-val ktorVersion = "3.0.3"
+val ktorVersion = "3.6.0"
 val exposedVersion = "0.57.0"
 
 // Ktor 3.0.3 pins netty 4.1.116.Final, which carries eighteen open advisories in
