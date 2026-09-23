@@ -21,7 +21,7 @@ jobs:
           distribution: temurin
 
       - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@v6
 
       # build runs the whole test suite as well as compiling.
       - name: Build and test
