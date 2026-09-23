@@ -1,0 +1,32 @@
+# Secrets — Mono token, Telegram token, ADMIN_PASSWORD live in env / Fly secrets
+.env
+.env.*
+*.local
+
+# Gradle / Kotlin build output
+build/
+.gradle/
+!gradle/wrapper/gradle-wrapper.jar
+
+# SQLite (local dev; on Fly it lives on the persistent volume)
+*.db
+*.db-shm
+*.db-wal
+data/
+
+# IDE
+.idea/
+*.iml
+.kotlin/
+
+# macOS
+.DS_Store
+
+# SDD scratch workspace (ledger, briefs, review packages)
+.superpowers/
+
+# Agent tooling: local permission rules, scratch state, and worktrees. The
+# worktrees are checkouts of this same repo living inside it, so committing one
+# would nest the repository in itself. The settings carry local paths and the
+# deployment's app name, which are nobody else's business.
+.claude/

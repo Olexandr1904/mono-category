@@ -1,0 +1,1046 @@
+/* ===========================================================================
+   Fonts — self-hosted IBM Plex, served from /static/fonts (SIL OFL license).
+   font-display: swap so text renders immediately in the fallback stack and
+   reflows onto the real face once it lands. Only the weights actually used
+   below are declared: Sans 400/500/600, Mono 400/500 — nothing in this file
+   ever asks for Sans 700 or Mono 600, so there is no missing-weight gap even
+   though the mockup's Google Fonts request listed a wider range.
+   =========================================================================== */
+@font-face {
+  font-family: "IBM Plex Sans";
+  src: url("/static/fonts/IBMPlexSans-Regular.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "IBM Plex Sans";
+  src: url("/static/fonts/IBMPlexSans-Medium.woff2") format("woff2");
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "IBM Plex Sans";
+  src: url("/static/fonts/IBMPlexSans-SemiBold.woff2") format("woff2");
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "IBM Plex Mono";
+  src: url("/static/fonts/IBMPlexMono-Regular.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "IBM Plex Mono";
+  src: url("/static/fonts/IBMPlexMono-Medium.woff2") format("woff2");
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* ===========================================================================
+   Tokens — src/../docs/design-system.md. Amber accent, dark surfaces.
+   =========================================================================== */
+:root {
+  --bg:        #0A0C0E;
+  --surface:   #121618;
+  --surface-2: #14181B;
+  --surface-3: #0E1113;   /* inputs, sunk below the card that holds them */
+
+  --line:      rgba(255,255,255,0.06);
+  --line-2:    rgba(255,255,255,0.07);
+  --line-3:    rgba(255,255,255,0.09);
+  --line-hover: rgba(255,255,255,0.20);
+
+  --text:      #E7EAEC;
+  --muted:     #99A2A9;
+  --dim:       #6C757C;
+  --dimmer:    #5F686F;
+  --dimmest:   #4E565C;
+
+  --accent:      #E5A83C;
+  --accent-hi:   #F0BE6B;
+  --accent-ink:  #171310;
+  --accent-soft: rgba(229,168,60,0.13);
+  --accent-edge: rgba(229,168,60,0.35);
+
+  --bad:    #E77A6E;
+  --good:   #62D19A;
+  --ok-bar: #4F7F9B;
+  --hold:   #C79A4A;
+
+  --font-sans: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+}
+
+/* ===========================================================================
+   Reset & base
+   =========================================================================== */
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; background: var(--bg); }
+body {
+  color: var(--text);
+  font: 400 15px/1.5 var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+a { color: var(--accent); text-decoration: none; }
+a:hover { color: var(--accent-hi); text-decoration: underline; }
+::selection { background: rgba(229,168,60,0.28); }
+input[type="checkbox"] { accent-color: var(--accent); width: 15px; height: 15px; margin: 0; cursor: pointer; }
+select, input, button, textarea { font-family: inherit; }
+
+h1 { margin: 0; font-size: 34px; font-weight: 600; letter-spacing: -0.02em; }
+h2 {
+  margin: 28px 0 12px; font-size: 12px; font-weight: 600; color: var(--dim);
+  text-transform: uppercase; letter-spacing: 0.1em;
+}
+p { margin: 0 0 12px; }
+
+/* Every number in the app: amounts, counts, percentages, MCC codes. */
+.mono {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ===========================================================================
+   Container
+   =========================================================================== */
+.container {
+  max-width: 1040px;
+  margin: 0 auto;
+  padding: 40px 32px 96px;
+}
+/* The mockup's 28px vertical rhythm between a page's sections (page header, stat strip,
+   list card, ...) — a wrapper *inside* .container, not .container itself, so a
+   not-yet-converted page's own block flow and margins are undisturbed until it opts in. */
+.stack { display: flex; flex-direction: column; gap: 28px; }
+/* Finding 11 (MINOR) of the 2026-09-04 review: margins never collapse between flex
+   children (only between block-level siblings), so an h2 kicker's own `margin: 28px 0
+   12px` stacked on top of .stack's 28px `gap` gave 56px above it — double the handoff's
+   uniform 28px rhythm — and 12px below it instead of 28px. .stack's own gap already
+   supplies the space on both sides of every child, h2 included. */
+.stack > h2 { margin: 0; }
+
+/* The login page renders standalone (no header, no nav — nothing to log into
+   yet), so it gets its own narrow, vertically centred container instead of
+   .container. */
+main.login {
+  max-width: 320px;
+  margin: 0 auto;
+  padding-top: 15vh;
+  padding-left: 20px;
+  padding-right: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+main.login form { display: flex; flex-direction: column; gap: 10px; }
+main.login button { width: 100%; }
+
+/* ===========================================================================
+   Header — sticky, 58px, backdrop blur.
+   =========================================================================== */
+header {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: rgba(10,12,14,0.92);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--line-2);
+}
+.header-inner {
+  max-width: 1040px;
+  margin: 0 auto;
+  padding: 0 32px;
+  height: 58px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+}
+.tabs { display: flex; align-items: center; gap: 4px; min-width: 0; }
+.tab {
+  border: 0;
+  background: transparent;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 14px;
+  color: var(--muted);
+  font-weight: 500;
+}
+.tab:hover { background: rgba(255,255,255,0.05); color: var(--text); text-decoration: none; }
+.tab.active { color: var(--text); font-weight: 600; }
+.header-right { display: flex; align-items: center; gap: 14px; }
+.header-meta { font-size: 12px; color: var(--dimmer); }
+.logout { display: inline-flex; }
+
+/* ===========================================================================
+   Buttons
+   =========================================================================== */
+/* Bare <button> (no .btn* class) is what most of the not-yet-redesigned pages
+   still emit — CategoriesPage, SettingsPage and the login form all render
+   plain submit buttons. Give it the same bordered look as .btn-outline so
+   nothing regresses to an unstyled browser default until those pages convert. */
+/* Finding 4 (IMPORTANT) of the 2026-09-04 review: the box model (padding, radius,
+   font-size) lived only on the bare `button` element selector, which never matches an
+   `<a class="btn ...">` — Огляд's own primary CTA ("Розібрати N операцій") is an <a>, and
+   rendered as an unstyled, square-cornered text run. Declared on both `button` and `.btn`
+   now, so either element gets the same shape regardless of which one carries the class. */
+button, .btn {
+  cursor: pointer;
+  font: inherit;
+  border-radius: 10px;
+  padding: 9px 16px;
+  font-size: 13px;
+  text-decoration: none;
+}
+button {
+  border: 1px solid var(--line-3);
+  background: var(--surface-2);
+  color: var(--text);
+}
+button:hover { border-color: var(--line-hover); }
+button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.btn { border: 0; background: var(--surface-2); color: var(--text); }
+/* Every other anchor-as-button component (.tab, .filter-chip, .month-stepper-arrow)
+   resets the base `a:hover { text-decoration: underline }`; .btn never did, so an
+   <a class="btn btn-primary"> underlined on hover like a plain text link. */
+.btn:hover { text-decoration: none; }
+.btn-primary { border: 0; background: var(--accent); color: var(--accent-ink); font-weight: 600; }
+.btn-primary:hover { background: var(--accent-hi); }
+.btn-outline { border: 1px solid var(--line-3); background: transparent; color: var(--muted); }
+.btn-outline:hover { border-color: var(--line-hover); color: var(--text); }
+.btn-ghost { border: 0; background: transparent; color: var(--dim); padding: 9px 6px; }
+.btn-ghost:hover { color: var(--text); }
+.btn-danger { border: 1px solid rgba(231,122,110,0.3); background: transparent; color: var(--bad); }
+.btn-danger:hover { background: rgba(231,122,110,0.1); border-color: rgba(231,122,110,0.55); }
+.btn-sm { padding: 7px 14px; border-radius: 8px; font-size: 13px; }
+
+/* ===========================================================================
+   Page header — micro-label over a 34px title, trailing slot for a month
+   stepper or action buttons.
+   =========================================================================== */
+.page-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+.page-header-text { display: flex; flex-direction: column; gap: 6px; }
+.micro-label {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--dim);
+}
+.page-header-trailing { display: flex; align-items: center; gap: 8px; }
+
+/* ===========================================================================
+   Month stepper — links, not JS-toggled buttons.
+   =========================================================================== */
+.month-stepper {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--surface-2);
+  border: 1px solid var(--line-2);
+  border-radius: 12px;
+  padding: 4px;
+}
+.month-stepper-arrow {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  color: var(--muted);
+  font-size: 16px;
+  line-height: 1;
+}
+.month-stepper-arrow:hover { background: rgba(255,255,255,0.06); color: var(--text); text-decoration: none; }
+.month-stepper-label {
+  min-width: 148px;
+  text-align: center;
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+}
+/* The arrow past the available month range (design-handoff.md: "arrows clamp at the ends
+   of the available month range") is a <span>, not an <a> — nothing to navigate to. */
+span.month-stepper-arrow.disabled { color: var(--dimmest); cursor: default; }
+
+/* ===========================================================================
+   Filter bar — Операції's selects + toggle pills (design-handoff.md §3.3).
+   Deliberately a different look from .select-row (dashed slot inside a row):
+   these are ordinary filter controls, filled from the start.
+   =========================================================================== */
+.filter-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.filter-select-wrap { position: relative; display: inline-flex; align-items: center; }
+.filter-select-wrap::after {
+  content: "▾";
+  position: absolute;
+  right: 13px;
+  color: var(--dimmer);
+  font-size: 9px;
+  pointer-events: none;
+}
+.filter-select {
+  appearance: none;
+  -webkit-appearance: none;
+  background: var(--surface-2);
+  border: 1px solid var(--line-3);
+  color: var(--text);
+  border-radius: 10px;
+  padding: 9px 34px 9px 14px;
+  font-size: 13px;
+  cursor: pointer;
+  outline: none;
+}
+.filter-select:hover, .filter-select:focus { border-color: var(--line-hover); }
+.filter-divider { width: 1px; height: 24px; background: var(--line-3); flex: none; }
+.filter-reset { font-size: 13px; color: var(--muted); text-decoration: underline; }
+.filter-reset:hover { color: var(--text); }
+
+/* ===========================================================================
+   Stat strip — 3-column card, 1px dividers, no gaps.
+   =========================================================================== */
+.stat-strip {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  background: var(--surface-2);
+  border: 1px solid var(--line-2);
+  border-radius: 16px;
+  overflow: hidden;
+}
+.stat-cell {
+  padding: 20px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border-left: 1px solid var(--line-2);
+}
+.stat-cell:first-child { border-left: 0; }
+.stat-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--dim);
+}
+.stat-figure-row { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.stat-figure { font-size: 24px; font-weight: 500; white-space: nowrap; }
+.stat-figure.bad { color: var(--bad); }
+.stat-caption { font-size: 13px; color: var(--dim); white-space: nowrap; }
+
+/* ===========================================================================
+   List card — rows separated by top borders, hover highlight.
+   =========================================================================== */
+.list-card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  overflow: hidden;
+}
+.list-card > * + * { border-top: 1px solid var(--line); }
+
+/* ===========================================================================
+   Row — 40px monogram, title + meta, category control, amount.
+   =========================================================================== */
+.row {
+  display: grid;
+  grid-template-columns: 40px minmax(0,1fr) auto auto;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 20px;
+  transition: background 120ms ease;
+}
+/* Finding 7 (MINOR) of the 2026-09-04 review: the app only ever emits `div.row` — the
+   `a.row`/`.row-link` selectors this used to target predate that and never matched
+   anything, so rows never highlighted on hover despite carrying a transition for it. */
+.list-card > .row:hover { background: rgba(255,255,255,0.025); }
+
+.row-monogram {
+  width: 40px;
+  height: 40px;
+  border-radius: 11px;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid var(--line-2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 600;
+  color: #9EA7AD;
+  letter-spacing: 0.02em;
+}
+.row-main { min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.row-title-line { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.row-title {
+  font-size: 15px;
+  font-weight: 500;
+  letter-spacing: -0.005em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.row-meta {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: var(--dimmer);
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.row-amount {
+  justify-self: end;
+  min-width: 132px;
+  text-align: right;
+  font-family: var(--font-mono);
+  font-size: 15px;
+  font-weight: 500;
+  white-space: nowrap;
+  color: var(--text);
+}
+.row-amount.income { color: var(--good); }
+
+/* ===========================================================================
+   Pills — status/state labels on a row or a category.
+   =========================================================================== */
+.pill {
+  display: inline-block;
+  flex: none;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  border-radius: 5px;
+  padding: 3px 7px;
+  background: rgba(255,255,255,0.06);
+  color: var(--muted);
+}
+.pill-outline { background: transparent; border: 1px solid var(--line-3); color: #7B848B; padding: 2px 6px; }
+.pill-accent { background: var(--accent-soft); color: var(--accent); }
+.pill-bad { background: rgba(231,122,110,0.13); color: var(--bad); }
+.pill-hold { background: transparent; border: 1px solid rgba(199,154,74,0.35); color: var(--hold); padding: 2px 6px; }
+
+/* ===========================================================================
+   Category select in a row — the design's sharpest idea: an uncategorised
+   row's select is a dashed, muted "empty slot"; a categorised one is solid
+   with a faint fill. Never flatten the two into one look.
+   =========================================================================== */
+.select-wrap { position: relative; display: flex; align-items: center; justify-self: end; }
+.select-wrap::after {
+  content: "▾";
+  position: absolute;
+  right: 11px;
+  color: var(--dimmer);
+  font-size: 9px;
+  pointer-events: none;
+}
+.select-row {
+  appearance: none;
+  -webkit-appearance: none;
+  background: transparent;
+  border: 1px dashed rgba(255,255,255,0.18);
+  color: #7B848B;
+  font-size: 13px;
+  padding: 7px 30px 7px 12px;
+  border-radius: 9px;
+  cursor: pointer;
+  outline: none;
+  min-width: 168px;
+}
+.select-row:hover { border-color: rgba(229,168,60,0.6); color: var(--text); }
+.select-row.is-filled {
+  background: rgba(255,255,255,0.05);
+  border: 1px solid var(--line-3);
+  color: var(--text);
+}
+.select-row.is-filled:hover { border-color: var(--line-hover); }
+
+/* ===========================================================================
+   Filter chips — bordered pill with a dot, links or form submissions.
+   =========================================================================== */
+.filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid var(--line-3);
+  background: transparent;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 500;
+  padding: 9px 14px;
+  border-radius: 10px;
+}
+.filter-chip:hover { border-color: var(--line-hover); color: var(--text); text-decoration: none; }
+.filter-chip .chip-dot { width: 6px; height: 6px; border-radius: 50%; background: #3A4147; }
+.filter-chip.active {
+  background: var(--accent-soft);
+  border-color: var(--accent-edge);
+  color: var(--accent-hi);
+}
+.filter-chip.active .chip-dot { background: var(--accent); }
+.filter-chip.active:hover { color: var(--accent-hi); }
+
+/* ===========================================================================
+   Rule suggestion banner — inset under the row it belongs to.
+   =========================================================================== */
+.rule-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin: 0 20px 14px;
+  padding: 10px 14px;
+  background: var(--accent-soft);
+  border: 1px solid var(--accent-edge);
+  border-radius: 10px;
+}
+.rule-banner-text { font-size: 13px; color: #C9B08A; }
+.rule-banner-actions { display: flex; align-items: center; gap: 6px; flex: none; }
+
+/* ===========================================================================
+   Day grouping.
+   =========================================================================== */
+.day-group { display: flex; flex-direction: column; }
+.day-group-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 20px 10px;
+}
+.day-group-label {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--dim);
+}
+.day-group-total { font-family: var(--font-mono); font-size: 12px; color: var(--dimmest); }
+
+/* ===========================================================================
+   Empty state.
+   =========================================================================== */
+.empty-state {
+  padding: 72px 24px;
+  text-align: center;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+.empty-state-title { font-size: 16px; font-weight: 500; }
+.empty-state-body { font-size: 13.5px; color: var(--dim); max-width: 320px; line-height: 1.5; }
+
+/* ===========================================================================
+   Forms — generic inputs shared by the legacy pages and the pages to come.
+   =========================================================================== */
+input, select, textarea {
+  background: var(--surface-3);
+  border: 1px solid var(--line-3);
+  border-radius: 9px;
+  color: var(--text);
+  font-size: 14px;
+  padding: 9px 12px;
+  outline: none;
+}
+input:focus, select:focus, textarea:focus { border-color: rgba(229,168,60,0.6); }
+input:disabled, select:disabled { opacity: 0.5; }
+/* No bare `label { display: flex; ... }` here on purpose: the still-legacy pages rely on
+   plain inline labels (a checkbox followed by its text) in several places, and a global
+   flex-column rule would stack them. `.field` already covers the labelled-input pattern
+   those pages use; a future page-conversion task can add its own label class for anything
+   new rather than widen this selector. */
+
+/* ===========================================================================
+   Flash messages.
+   =========================================================================== */
+.flash { padding: 10px 12px; border-radius: 8px; margin-bottom: 16px; font-size: 13.5px; }
+.flash.ok { background: rgba(98,209,154,0.1); color: var(--good); }
+.flash.error { background: rgba(231,122,110,0.12); color: var(--bad); }
+.muted { color: var(--muted); }
+.hint { color: var(--dim); font-size: 13px; }
+
+/* `classes = "inline"` marks a <form> that must sit beside its sibling buttons rather
+   than drop to its own line — every parent that uses it (.page-header-trailing,
+   .settings-card-actions, .rule-banner-actions, ...) is already a flex row, but a bare
+   <form> is still a block-level flex item there and would still start a new visual row
+   if that parent ever stopped being one. */
+.inline { display: inline-block; }
+
+/* ===========================================================================
+   Огляд — hero card: 40px total, stacked bar, breakdown list. The donut this
+   replaces is gone; these numbers render exactly once, here.
+   =========================================================================== */
+.hero-card {
+  background: var(--surface-2);
+  border: 1px solid var(--line-2);
+  border-radius: 16px;
+  padding: 26px 24px 8px;
+}
+.hero-kicker {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--dim);
+}
+.hero-total {
+  font-size: 40px;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+  margin-top: 8px;
+}
+
+/* One <div> per breakdown entry, width set via data-bar-width through the CSSOM (see
+   app.js's applyBarWidths) — never a style= attribute. Defaults to 0 so a script failure
+   shows nothing rather than confidently showing everything. */
+.stacked-bar {
+  display: flex;
+  gap: 2px;
+  height: 10px;
+  margin: 22px 0 4px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: var(--line-2);
+}
+.stacked-bar-segment { display: block; height: 100%; width: 0; flex: none; }
+
+.breakdown-list { display: flex; flex-direction: column; }
+.breakdown-row {
+  display: grid;
+  grid-template-columns: 10px minmax(0,1fr) auto 58px;
+  align-items: center;
+  gap: 14px;
+  padding: 13px 0;
+  border-top: 1px solid var(--line);
+}
+.breakdown-list > .breakdown-row:first-child { border-top: 0; }
+.breakdown-chip { width: 10px; height: 10px; border-radius: 3px; flex: none; }
+.breakdown-name { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.breakdown-name-text {
+  font-size: 15px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.breakdown-amount { font-size: 14px; white-space: nowrap; }
+.breakdown-pct { font-size: 13px; color: var(--dim); text-align: right; white-space: nowrap; }
+
+/* Fixed, CSS-authored colours for design-handoff.md's seven-colour segment palette, plus
+   the always-grey "Без категорії" — CSP's style-src 'self' rules out an inline colour per
+   category, so app.web.Breakdown.kt picks one of these eight classes instead. */
+.seg-0 { background: #4F7F9B; }
+.seg-1 { background: #C97F4E; }
+.seg-2 { background: #62D19A; }
+.seg-3 { background: #E5A83C; }
+.seg-4 { background: #B8698A; }
+.seg-5 { background: #7E6BA8; }
+.seg-6 { background: #5D6E7A; }
+.seg-uncat { background: #414A51; }
+
+/* ===========================================================================
+   Огляд — uncategorized banner (amber tint) and the Ліміти block, both states.
+   =========================================================================== */
+.uncat-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  flex-wrap: wrap;
+  background: var(--accent-soft);
+  border: 1px solid var(--accent-edge);
+  border-radius: 14px;
+  padding: 18px 22px;
+}
+.uncat-banner-text { display: flex; flex-direction: column; gap: 5px; }
+.uncat-banner-line1 { font-size: 15px; font-weight: 500; color: var(--accent-hi); }
+.uncat-banner-line2 { font-size: 13px; color: #A08B62; }
+
+.limit-list {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  overflow: hidden;
+}
+.limit-row {
+  display: grid;
+  grid-template-columns: minmax(0,1fr) 168px 168px;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 20px;
+}
+.limit-list > .limit-row + .limit-row { border-top: 1px solid var(--line); }
+.limit-row-name {
+  font-size: 15px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.limit-row-limit { display: flex; flex-direction: column; gap: 7px; }
+.limit-row-limit-text { font-size: 13px; color: var(--muted); white-space: nowrap; }
+.limit-row-amount { display: flex; flex-direction: column; gap: 4px; align-items: flex-end; text-align: right; }
+.limit-row-spent { font-size: 15px; font-weight: 500; white-space: nowrap; }
+.limit-row-hint { font-size: 11.5px; color: var(--dimmer); white-space: nowrap; }
+
+/* Shared 5px limit-consumption bar — Огляд's Ліміти block and Категорії's list both use
+   it. Fill width rides data-bar-width, never style=; colour comes from a status modifier
+   class, capped at 100% visually even when the category is over. */
+.limit-bar-track {
+  height: 5px;
+  border-radius: 999px;
+  background: var(--line-2);
+  overflow: hidden;
+}
+.limit-bar-fill { display: block; height: 100%; width: 0; background: var(--ok-bar); }
+.limit-bar-fill.warning { background: var(--accent); }
+.limit-bar-fill.over { background: var(--bad); }
+
+.limits-empty {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  flex-wrap: wrap;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 18px 22px;
+}
+.limits-empty-text { display: flex; flex-direction: column; gap: 5px; }
+.limits-empty-title { font-size: 15px; font-weight: 500; }
+.limits-empty-body { font-size: 13px; color: var(--dim); }
+
+/* ===========================================================================
+   Категорії — summary strip reuses .stat-strip/.stat-cell; this is the
+   read-only list, its <details>-based row, and the inline editor.
+   =========================================================================== */
+.cat-list {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  overflow: hidden;
+}
+.cat-list-header {
+  display: grid;
+  grid-template-columns: 44px minmax(0,1fr) 168px 168px 20px;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 20px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--dimmer);
+}
+.cat-list-header-amount { text-align: right; }
+
+.cat-row { display: block; }
+.cat-list > .cat-row + .cat-row { border-top: 1px solid var(--line); }
+/* <summary>'s native disclosure triangle is replaced by .cat-chevron below, in both
+   Chromium (::-webkit-details-marker) and Firefox/Safari (list-style). */
+.cat-row-summary {
+  display: grid;
+  grid-template-columns: 44px minmax(0,1fr) 168px 168px 20px;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 20px;
+  cursor: pointer;
+  list-style: none;
+  transition: background 120ms ease;
+}
+.cat-row-summary::-webkit-details-marker { display: none; }
+.cat-row-summary:hover { background: rgba(255,255,255,0.025); }
+
+.cat-tile {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid var(--line);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 19px;
+}
+.cat-name-block { min-width: 0; display: flex; flex-direction: column; gap: 5px; }
+.cat-name-line { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.cat-name {
+  font-size: 15px;
+  font-weight: 500;
+  letter-spacing: -0.005em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.cat-meta {
+  font-size: 11.5px;
+  color: var(--dimmer);
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cat-limit-col { display: flex; flex-direction: column; gap: 7px; }
+.cat-limit-text { font-size: 13px; color: var(--muted); white-space: nowrap; }
+/* A plain <span>, not a real button — design-system.md: the whole <summary> already
+   toggles the editor, so this is a visual affordance only (no stopPropagation needed,
+   unlike the prototype's version of this control). */
+span.cat-limit-ghost {
+  display: inline-flex;
+  align-self: flex-start;
+  border: 1px dashed rgba(255,255,255,0.16);
+  color: #7B848B;
+  white-space: nowrap;
+}
+.cat-row-summary:hover span.cat-limit-ghost { border-color: rgba(229,168,60,0.6); color: var(--text); }
+
+.cat-amount-col { display: flex; flex-direction: column; gap: 4px; align-items: flex-end; text-align: right; }
+.cat-amount-spent { font-size: 15px; font-weight: 500; white-space: nowrap; }
+.cat-amount-hint { font-size: 11.5px; color: var(--dimmer); white-space: nowrap; }
+
+.cat-chevron {
+  color: var(--dimmer);
+  font-size: 10px;
+  text-align: center;
+}
+.cat-chevron::after { content: "▾"; }
+details.cat-row[open] .cat-chevron::after { content: "▴"; }
+
+.cat-editor {
+  background: rgba(255,255,255,0.02);
+  border-top: 1px solid var(--line);
+  padding: 22px 20px 20px 80px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.cat-editor-form { display: flex; flex-direction: column; gap: 18px; }
+.cat-editor-grid { display: grid; grid-template-columns: 1fr 88px 160px 160px; gap: 14px; }
+.cat-field { display: flex; flex-direction: column; gap: 7px; }
+.cat-field-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--dim);
+}
+.cat-field input { width: 100%; box-sizing: border-box; }
+input.cat-emoji-input { text-align: center; }
+.cat-field-mcc { width: 100%; }
+.cat-mcc-hint { font-size: 12px; color: var(--dimmer); margin-top: -10px; }
+
+.cat-checkbox-row { display: flex; align-items: center; gap: 22px; flex-wrap: wrap; padding-top: 2px; }
+label.cat-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13.5px;
+  color: #C3CACF;
+  cursor: pointer;
+}
+.cat-checkbox-divider { width: 1px; height: 20px; background: var(--line-3); }
+
+.cat-editor-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding-top: 4px;
+}
+.cat-editor-hint { font-size: 12.5px; color: var(--dimmer); }
+.cat-editor-footer-actions { display: flex; align-items: center; gap: 8px; flex: none; }
+
+/* ===========================================================================
+   Налаштування — status card, accounts table, sync/Telegram cards, tokens,
+   language banner (design-handoff.md §4).
+   =========================================================================== */
+.status-card {
+  background: var(--surface-2); border: 1px solid var(--line-2); border-radius: 16px;
+  padding: 20px 24px; display: flex; flex-direction: column; gap: 14px;
+}
+.status-card-head { display: flex; align-items: center; gap: 10px; }
+.status-dot { width: 8px; height: 8px; border-radius: 50%; flex: none; background: var(--dimmest); }
+.status-dot.good { background: var(--good); }
+.status-headline { font-size: 15px; font-weight: 500; }
+.status-pills { display: flex; flex-wrap: wrap; gap: 8px; }
+/* Shared "success tint" pill — reused as-is for the token fields' inline
+   "налаштовано" tag (design-system.md: one component, not two). */
+.status-pill {
+  display: inline-flex; align-items: center; gap: 6px;
+  border-radius: 8px; padding: 6px 11px; font-size: 12.5px; color: #A9B1B7;
+  background: rgba(255,255,255,0.05); border: 1px solid var(--line-3); flex: none;
+}
+.status-pill.good { background: rgba(98,209,154,0.08); border-color: rgba(98,209,154,0.22); }
+.status-pill.muted { color: var(--muted); }
+.status-pill-mark { color: var(--good); }
+
+/* --- Рахунки Монобанку ---------------------------------------------------- */
+.acct-card { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; }
+.acct-empty { margin: 0; padding: 20px; }
+.acct-header, .acct-row {
+  display: grid; grid-template-columns: minmax(0,1fr) 150px 160px 110px; gap: 16px; align-items: center;
+}
+.acct-header {
+  padding: 12px 20px; color: var(--dim); font-size: 11px; font-weight: 600;
+  text-transform: uppercase; letter-spacing: 0.08em;
+}
+.acct-row { padding: 14px 20px; border-top: 1px solid var(--line); }
+.acct-pan { color: #C3CACF; font-size: 13.5px; }
+.acct-type { color: var(--muted); font-size: 13.5px; }
+.acct-balance { font-size: 14px; text-align: right; white-space: nowrap; }
+.acct-col-balance { text-align: right; }
+.acct-col-active { display: flex; justify-content: flex-end; }
+.acct-footer {
+  display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;
+  padding: 14px 20px; background: rgba(255,255,255,0.02); border-top: 1px solid var(--line);
+}
+.acct-footer-hint { margin: 0; flex: 1 1 320px; }
+.acct-footer-actions { display: flex; align-items: center; gap: 12px; flex: none; }
+.acct-total { font-size: 13px; color: var(--muted); white-space: nowrap; }
+
+/* --- Синхронізація + Telegram, side by side ------------------------------- */
+.settings-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: stretch; }
+.settings-card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: 16px;
+  padding: 20px 22px; display: flex; flex-direction: column; gap: 14px;
+}
+.settings-card-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.settings-card-title { font-size: 15px; font-weight: 500; }
+.settings-card-body { display: flex; flex-direction: column; gap: 8px; flex: 1; }
+.settings-card-result { font-size: 12.5px; color: var(--muted); }
+.settings-card-hint { margin: 0; }
+.settings-card-code { font-size: 13.5px; }
+/* "buttons pinned to the bottom" (design-handoff.md §4.4). */
+.settings-card-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: auto; }
+
+/* --- Токени ---------------------------------------------------------------- */
+.token-card { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 20px 22px; }
+.token-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 14px; }
+/* The 2026-09-03 fix this screen must not undo: the input lives *inside* its own
+   label, so the caption stays bound to the right field at any width — see
+   SettingsPage.kt's tokensCard() comment. */
+.token-field { display: flex; flex-direction: column; gap: 7px; }
+.token-field-label { display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--text); }
+.token-field input { width: 100%; box-sizing: border-box; }
+.token-card-actions { display: flex; justify-content: flex-end; margin-top: 16px; }
+
+/* --- Мова -------------------------------------------------------------------- */
+.lang-banner {
+  background: var(--surface); border: 1px solid var(--line); border-radius: 14px;
+  padding: 16px 22px; display: flex; align-items: center; justify-content: space-between;
+  flex-wrap: wrap; gap: 12px;
+}
+.lang-banner-label { display: flex; align-items: center; gap: 12px; font-size: 14px; color: var(--muted); }
+
+/* ===========================================================================
+   Mobile — container drops to 16px padding; stat strip and rows stack.
+   =========================================================================== */
+@media (max-width: 560px) {
+  /* Four tabs plus "Вийти" no longer fit one 58px row at 390px (~463px of content in
+     ~358px of space) — the old CSS wrapped the whole header to a second line; that would
+     blow the header past its fixed 58px sticky height instead. Scroll the tab strip
+     horizontally in the space the fixed-width logout button leaves it, rather than either. */
+  .header-inner { padding: 0 16px; gap: 8px; }
+  .tabs {
+    flex: 1 1 auto;
+    overflow-x: auto;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+  .tabs::-webkit-scrollbar { display: none; }
+  .tab { flex: none; white-space: nowrap; }
+  .header-right { flex: none; }
+  /* The nav bar is already tight at 390px — four tabs plus "Вийти" only fit by scrolling
+     the tab strip (see the comment above .header-inner). The account-count caption wired
+     up for the handoff's §0 ("Монобанк · 5 рахунків") is not essential chrome; kept on
+     desktop, dropped here rather than overlapping the tabs or forcing a second row. */
+  .header-meta { display: none; }
+  .container { padding: 24px 16px 64px; }
+  .stack { gap: 20px; }
+  h1 { font-size: 26px; }
+
+  .page-header { align-items: flex-start; }
+  .month-stepper { width: 100%; justify-content: space-between; }
+
+  .stat-strip { grid-template-columns: 1fr; }
+  .stat-cell { border-left: 0; border-top: 1px solid var(--line-2); }
+  .stat-cell:first-child { border-top: 0; }
+
+  /* A lone vertical bar reads as a stray mark once the filter bar wraps to more than one
+     line on a phone-width screen. */
+  .filter-divider { display: none; }
+  .filter-select-wrap, .filter-select { width: 100%; }
+  .filter-bar { align-items: stretch; }
+
+  .row { grid-template-columns: 40px 1fr; grid-template-areas: "mono main" "mono ctrl" "mono amount"; row-gap: 6px; }
+  .row-monogram { grid-area: mono; }
+  .row-main { grid-area: main; }
+  .select-wrap { grid-area: ctrl; justify-self: start; }
+  .row-amount { grid-area: amount; justify-self: start; text-align: left; }
+
+  /* --- Огляд, mobile --- */
+  .hero-total { font-size: 30px; }
+  .hero-card { padding: 22px 18px 6px; }
+  .uncat-banner { padding: 16px 18px; }
+  .limit-row { grid-template-columns: 1fr; row-gap: 10px; }
+  .limit-row-amount { align-items: flex-start; text-align: left; }
+
+  /* --- Категорії, mobile --- */
+  .cat-list-header { display: none; }
+  .cat-row-summary {
+    grid-template-columns: 44px 1fr;
+    grid-template-areas: "tile name" "tile limit" "tile amount" "tile chevron";
+    row-gap: 8px;
+  }
+  .cat-tile { grid-area: tile; }
+  .cat-name-block { grid-area: name; }
+  .cat-limit-col { grid-area: limit; }
+  .cat-amount-col { grid-area: amount; align-items: flex-start; text-align: left; }
+  .cat-chevron { display: none; }
+  .cat-editor { padding: 18px 16px 16px; }
+  .cat-editor-grid { grid-template-columns: 1fr; }
+  .cat-checkbox-row { flex-direction: column; align-items: flex-start; gap: 12px; }
+  .cat-checkbox-divider { display: none; }
+  .cat-editor-footer { flex-direction: column; align-items: stretch; gap: 12px; }
+  .cat-editor-footer-actions { justify-content: flex-end; }
+
+  /* --- Налаштування, mobile --- */
+  .status-card { padding: 18px 16px; }
+  .acct-header { display: none; }
+  .acct-row {
+    grid-template-columns: 1fr auto;
+    grid-template-areas: "pan active" "type type" "balance balance";
+    row-gap: 6px;
+  }
+  .acct-pan { grid-area: pan; }
+  .acct-col-active { grid-area: active; }
+  .acct-type { grid-area: type; }
+  .acct-balance { grid-area: balance; text-align: left; }
+  .acct-footer { flex-direction: column; align-items: stretch; }
+  /* Undoes the row layout's 320px flex-basis — in a column flex container that basis is a
+     *height*, not a width, and left a tall empty gap above "Разом / Зберегти". */
+  .acct-footer-hint { flex: none; }
+  .acct-footer-actions { justify-content: space-between; }
+  .settings-cards { grid-template-columns: 1fr; }
+  .settings-card-actions { flex-direction: column; align-items: stretch; }
+  .token-grid { grid-template-columns: 1fr; }
+  .lang-banner { flex-direction: column; align-items: stretch; }
+  .lang-banner-label { justify-content: space-between; }
+}

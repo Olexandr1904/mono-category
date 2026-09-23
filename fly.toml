@@ -1,0 +1,40 @@
+app = "mono-category"
+primary_region = "fra"
+
+[build]
+
+[env]
+  PORT = "8080"
+  DB_PATH = "/data/budget.db"
+  # PUBLIC_URL and ALLOWED_HOSTS are deliberately unset: the app derives its URL
+  # from the proxy's X-Forwarded-Host, validated against a strict hostname shape.
+  # Once your app has a stable hostname, pinning both is worth doing — see README.
+
+[[mounts]]
+  source = "budget_data"
+  destination = "/data"
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  # A cold JVM cannot answer Monobank within its 5-second timeout, and three
+  # misses disable the webhook permanently. The machine stays awake.
+  auto_stop_machines = false
+  auto_start_machines = true
+  min_machines_running = 1
+  # SQLite on a Fly volume tolerates exactly one writer. Never raise this.
+  max_machines_running = 1
+
+  [http_service.http_options]
+    h2_backend = false
+
+  [[http_service.checks]]
+    interval = "30s"
+    timeout = "5s"
+    grace_period = "20s"
+    method = "GET"
+    path = "/health"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "512mb"

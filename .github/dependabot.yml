@@ -1,0 +1,15 @@
+version: 2
+updates:
+  # Netty is pinned ahead of what Ktor selects, because Ktor 3.0.3's choice has
+  # open HTTP request smuggling advisories and a Fly proxy in front of a Netty
+  # origin is the vulnerable shape. Re-check OSV before accepting a Ktor bump.
+  - package-ecosystem: gradle
+    directory: "/"
+    schedule:
+      interval: monthly
+    open-pull-requests-limit: 5
+
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: monthly
