@@ -7,7 +7,7 @@ plugins {
 repositories { mavenCentral() }
 
 val ktorVersion = "3.0.3"
-val exposedVersion = "0.57.0"
+val exposedVersion = "1.5.0"
 
 // Ktor 3.0.3 pins netty 4.1.116.Final, which carries eighteen open advisories in
 // netty-codec-http alone — four of them HTTP request smuggling (GHSA-pwqr-wmgm-9rr8
