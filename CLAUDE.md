@@ -47,7 +47,8 @@ app.notify   HttpTelegramClient    Telegram API behind the TelegramClient interf
              TelegramUpdateHandler pairing, command routing, callback dispatch
              MccPromptService      "which category is this?" prompt + button handling
              LimitPromptService    /limit's category buttons + amount reply dialog
-             Reports               /status and /left rendering, pure over a MonthSummary
+             Reports               /status, /left and the monthly recap, pure over a MonthSummary
+             MonthlyReportService  sends that recap on the 1st, claim-then-send
 app.ingest   IngestService         THE ONLY WRITER (see below)
              WebhookProcessor      store-then-parse drain of webhook_events
              SyncService           month statement pull, rate-limit aware
@@ -141,6 +142,10 @@ render in [Reports.kt](src/main/kotlin/app/notify/Reports.kt) as pure functions 
 `MonthSummary`; `/left` is a fourth reader of spending and applies the `countsAsSpending`
 filter itself, like the three before it.
 
+The monthly recap shares `/status`'s lines; its pull of the closed month passes
+`recordResult = false`, because Settings' sync card assumes every recorded sync is the
+current month's.
+
 `/limit` is a two-step dialog — category buttons, then an amount typed as a **reply** —
 and everything awkward about it comes from privacy mode: the bot receives only commands
 and replies to its own messages, so an amount typed straight into the room is lost.
@@ -199,7 +204,8 @@ account exclusion is enforced upstream, in `spentByCategory` itself, but the cat
 exclusion is a per-reader filter on `summary.categories`, and every reader that builds its
 own total or its own alert must apply it. `monthBreakdown` (Огляд's stacked bar and
 breakdown list, `app/web/Breakdown.kt`), `Notifier`, `/status`'s `renderStatus` and
-`/transactions`' own day-group header (`countedDayTotal`) each do; a fifth reader that
+`/transactions`' own day-group header (`countedDayTotal`) each do, and so does the monthly
+recap's overspend footer (`renderMonthlyReport`); another reader that
 forgets is a header and a body that disagree, not a compile error — which is exactly how
 the day headers came to sum 84% above the month total on the same page, caught by a
 walkthrough of the live app. They compose: a transaction is excluded if
@@ -312,6 +318,14 @@ translation is a compile error. Get it with `settings.copy()`. Category names an
 user data and never go through `Copy`; money and `dd.MM` formatting stay as `app.budget`
 renders them. Default language is Ukrainian.
 
+An answered prompt's message is assembled rather than looked up: `MccPromptService`
+replaces the question with the operation it was about (`dd.MM · amount · recipient`) above
+the outcome text, prefixed by a ✅/⏭/⚠️ mark. Those marks are **not** in `Copy` on purpose —
+four of the outcome strings (`mccBoundFromTransaction`, `singleTransactionCategorized`,
+`unknownTransaction`, `conduitMccRejected`) are also the web UI's flash messages, and a mark
+baked into the string would surface there too. Editing a message throws the question's own
+text away, so anything the answer still needs has to be rebuilt into it.
+
 `Category.label` is `"$emoji $name"` and is the one string Telegram buttons, the Огляд
 breakdown list, the Категорії list and the dropdowns all render, so junk in `emoji` shows
 up everywhere at once. The category editor runs the field through `sanitizeEmoji` (digits
@@ -342,7 +356,8 @@ them in tests rather than sleeping.
 writer, never raise it. The machine never sleeps (a cold JVM misses Monobank's 5s timeout).
 Background work uses the application's own `CoroutineScope` (`launch { }` inside `module`),
 never `GlobalScope`, so it dies with the app; the hourly loop drains events, syncs the
-current month and prunes processed webhook rows older than 30 days.
+current month, prunes processed webhook rows older than 30 days and, on the 1st, pulls the
+closed month once more and sends its recap.
 
 Commit messages: lowercase `feat:` / `fix:` prefix, subject states the behaviour or the bug
 in plain words (`fix: no-referrer made Chrome post Origin: null, blocking every form`).

@@ -7,6 +7,8 @@ import app.budget.CounterpartyRepository
 import app.budget.KYIV
 import app.budget.TransactionRepository
 import app.budget.Txn
+import app.budget.formatDay
+import app.budget.formatMinor
 import app.budget.monthKeyOf
 import app.db.Crypto
 import app.db.SettingKeys
@@ -22,6 +24,7 @@ import java.time.Instant
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNotEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
@@ -391,6 +394,99 @@ class MccPromptServiceTest {
         assertTrue(w.categories.mccMapping().isEmpty())
         assertNull(w.prompts.openFor(5712))
         assertTrue(w.telegram.edits.single().second.contains(UkCopy.mccSkipped(5712)), w.telegram.edits.toString())
+    }
+
+    /**
+     * Answering replaces the question's whole text, so the amount and the merchant that
+     * were in it disappear with it. A chat full of "Пропущено." says nothing about what was
+     * skipped — and a page of transfers answered in one sitting produces exactly that.
+     * Every outcome now opens with the operation it belongs to.
+     */
+    @Test
+    fun `a skipped question still says which purchase it was`() = withTestDb { db ->
+        val w = wire(db)
+        w.categories.create("Home", "🏠", 1_000_000, 80)
+        runBlocking {
+            w.ingest.ingest(listOf(txn("t1")))
+            w.service.handle(
+                TgCallbackQuery("cb1", encodeCallback(PromptRef.ByMcc(5712), PromptAction.Skip), TgMessage(100, TgChat(12345))),
+            )
+        }
+        val edited = w.telegram.edits.single().second
+        assertTrue(edited.contains(formatMinor(-243_000)), "the amount must survive the answer: $edited")
+        assertTrue(edited.contains("Epicentr"), "so must the merchant: $edited")
+        assertTrue(edited.contains(formatDay(august)), "and the day it happened: $edited")
+        assertTrue(edited.contains(UkCopy.mccSkipped(5712)), edited)
+    }
+
+    @Test
+    fun `a categorised question says which purchase it was`() = withTestDb { db ->
+        val w = wire(db)
+        val home = w.categories.create("Home", "🏠", 1_000_000, 80)
+        runBlocking {
+            w.ingest.ingest(listOf(txn("t1")))
+            w.service.handle(
+                TgCallbackQuery(
+                    "cb1", encodeCallback(PromptRef.ByMcc(5712), PromptAction.Choose(home)), TgMessage(100, TgChat(12345)),
+                ),
+            )
+        }
+        val edited = w.telegram.edits.single().second
+        assertTrue(edited.contains(formatMinor(-243_000)), edited)
+        assertTrue(edited.contains("Epicentr"), edited)
+        assertTrue(edited.contains(UkCopy.mccBound(5712, "🏠 Home")), edited)
+    }
+
+    /**
+     * A transfer's outcome was the worst of the three: no MCC in the text either, so
+     * "Пропущено." was the entire message. It has to name the recipient the question named,
+     * not the bank's own description, or it identifies nothing a person would recognise.
+     */
+    @Test
+    fun `a skipped transfer names the recipient the question named`() = withTestDb { db ->
+        val w = wire(db)
+        w.categories.create("Home", "🏠", 1_000_000, 80)
+        ConduitMccRepository(db).replaceAll(setOf(4829))
+        val transfer = transferTxn("t1", "name:петренко іван")
+        runBlocking {
+            w.ingest.ingest(listOf(transfer))
+            val promptId = w.prompts.openForTransaction("t1")!!.id
+            w.service.handle(
+                TgCallbackQuery("cb1", encodeCallback(PromptRef.ById(promptId), PromptAction.Skip), TgMessage(100, TgChat(12345))),
+            )
+        }
+        val edited = w.telegram.edits.single().second
+        assertTrue(edited.contains(formatMinor(transfer.amountMinor)), "the amount must survive, signed: $edited")
+        assertTrue(edited.contains("Петренко Іван"), "the recipient, not the raw description: $edited")
+        assertTrue(edited.contains(UkCopy.transferSkipped), edited)
+    }
+
+    /**
+     * The complaint this whole change answers was "I can't tell what was skipped and what
+     * was added". The operation line fixes *which* row; this fixes *what happened to it*,
+     * so a column of answers can be read without parsing the sentences.
+     */
+    @Test
+    fun `a skipped outcome and an applied one open with different marks`() = withTestDb { db ->
+        val w = wire(db)
+        val home = w.categories.create("Home", "🏠", 1_000_000, 80)
+        runBlocking {
+            w.ingest.ingest(listOf(txn("t1", mcc = 5712), txn("t2", mcc = 5999)))
+            w.service.handle(
+                TgCallbackQuery("cb1", encodeCallback(PromptRef.ByMcc(5712), PromptAction.Skip), TgMessage(100, TgChat(12345))),
+            )
+            w.service.handle(
+                TgCallbackQuery("cb2", encodeCallback(PromptRef.ByMcc(5999), PromptAction.Choose(home)), TgMessage(101, TgChat(12345))),
+            )
+        }
+        // The outcome is the second line now; the first names the operation.
+        val outcomes = w.telegram.edits.map { it.second.substringAfter('\n') }
+        assertEquals(2, outcomes.size, outcomes.toString())
+        assertTrue(outcomes.none { it.first().isLetter() }, "each outcome must open with a mark, not a word: $outcomes")
+        assertNotEquals(
+            outcomes[0].first(), outcomes[1].first(),
+            "skipped and applied must not open with the same mark: $outcomes",
+        )
     }
 
     @Test

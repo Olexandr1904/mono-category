@@ -9,6 +9,7 @@ import app.budget.MccConflictException
 import app.budget.TransactionRepository
 import app.budget.Txn
 import app.budget.counterpartyOf
+import app.budget.formatDay
 import app.budget.formatMinor
 import app.db.MccPrompts
 import app.db.SettingKeys
@@ -207,6 +208,19 @@ class MccPromptRepository(private val db: Database) {
 /** Telegram messages render fine well past this; it just keeps button labels and lists tidy. */
 const val MAX_CATEGORY_NAME = 40
 
+/**
+ * How an answered question opens, so a column of answers can be scanned without reading the
+ * sentences: what was filed, what was waved through, what refused to happen.
+ *
+ * Deliberately not part of the [app.i18n.Copy] strings themselves. Four of the outcome
+ * texts — `mccBoundFromTransaction`, `singleTransactionCategorized`, `unknownTransaction`,
+ * `conduitMccRejected` — are also the web UI's flash messages, where a Telegram-shaped mark
+ * would be noise. The mark is this chat's presentation of the text, not the text.
+ */
+private const val MARK_APPLIED = "✅"
+private const val MARK_SKIPPED = "⏭"
+private const val MARK_REFUSED = "⚠️"
+
 class MccPromptService(
     private val prompts: MccPromptRepository,
     private val categories: CategoryRepository,
@@ -333,19 +347,19 @@ class MccPromptService(
                     return true
                 }
 
-                val outcome = when (val action = callback.action) {
+                val (mark, outcome) = when (val action = callback.action) {
                     PromptAction.Skip -> {
                         prompts.resolve(mcc)
-                        copy.mccSkipped(mcc)
+                        MARK_SKIPPED to copy.mccSkipped(mcc)
                     }
                     is PromptAction.Choose -> try {
                         ingestProvider().bindMcc(mcc, action.categoryId)
                         prompts.resolve(mcc)
                         val name = categories.byId(action.categoryId)?.label ?: "category ${action.categoryId}"
-                        copy.mccBound(mcc, name)
+                        MARK_APPLIED to copy.mccBound(mcc, name)
                     } catch (e: MccConflictException) {
                         prompts.resolve(mcc)
-                        copy.mccConflictTelegram(mcc, e.ownerName)
+                        MARK_REFUSED to copy.mccConflictTelegram(mcc, e.ownerName)
                     } catch (e: ConduitMccException) {
                         // The code became conduit after this question was asked (the owner
                         // flipped it in the web form while the message sat unanswered).
@@ -355,7 +369,7 @@ class MccPromptService(
                         // has an explicit case for exactly this race (Conflict); give the MCC
                         // path the same treatment instead of a silent swallow.
                         prompts.resolve(mcc)
-                        copy.conduitMccRejected(mcc)
+                        MARK_REFUSED to copy.conduitMccRejected(mcc)
                     }
                     // Opens a reply box instead of resolving anything, so it falls out of
                     // the outcome/edit path shared by Skip and Choose below.
@@ -367,7 +381,8 @@ class MccPromptService(
                 }
 
                 answer(query.id, null)
-                runCatching { telegram.editMessageText(chatId, messageId, outcome) }
+                val text = withOperation(open.transactionId, mark, outcome)
+                runCatching { telegram.editMessageText(chatId, messageId, text) }
                     .onFailure { log.warn("failed to edit prompt message {}", messageId, it.withRedactedTelegramToken()) }
                 true
             }
@@ -385,7 +400,8 @@ class MccPromptService(
                     PromptAction.Skip -> {
                         prompts.resolveById(prompt.id)
                         answer(query.id, null)
-                        runCatching { telegram.editMessageText(chatId, messageId, copy.transferSkipped) }
+                        val text = withOperation(prompt.transactionId, MARK_SKIPPED, copy.transferSkipped)
+                        runCatching { telegram.editMessageText(chatId, messageId, text) }
                             .onFailure { log.warn("failed to edit prompt message {}", messageId, it.withRedactedTelegramToken()) }
                         true
                     }
@@ -414,33 +430,36 @@ class MccPromptService(
         // question may already have filed this row, and quietly reassigning it would
         // hide that from the person who pressed the button.
         val current = ingestProvider().transactionCategoryName(prompt.transactionId)
-        val message = if (current != null) {
-            copy.transferAlreadyCategorized(current)
+        val (mark, message) = if (current != null) {
+            MARK_REFUSED to copy.transferAlreadyCategorized(current)
         } else {
             when (val outcome = ingestProvider().setTransactionCategoryChoice(prompt.transactionId, categoryId)) {
                 is CategoryChoiceOutcome.CounterpartyBound ->
-                    copy.transferBound(outcome.displayName, outcome.categoryName, outcome.movedCount)
-                is CategoryChoiceOutcome.TransferSingleRow -> copy.transferSingleRow(outcome.categoryName)
+                    MARK_APPLIED to copy.transferBound(outcome.displayName, outcome.categoryName, outcome.movedCount)
+                is CategoryChoiceOutcome.TransferSingleRow -> MARK_APPLIED to copy.transferSingleRow(outcome.categoryName)
                 // The owner can un-mark a code as conduit while its question is still open.
                 // When that happens, the choice binds the MCC instead of the recipient and
                 // can move many rows — the message must say that happened, not the opposite.
-                is CategoryChoiceOutcome.Bound -> copy.mccBoundFromTransaction(
+                is CategoryChoiceOutcome.Bound -> MARK_APPLIED to copy.mccBoundFromTransaction(
                     outcome.merchant, outcome.mcc, outcome.categoryName, outcome.movedCount,
                 )
-                is CategoryChoiceOutcome.Conflict -> copy.transferMccConflict(outcome.mcc, outcome.ownerName)
+                is CategoryChoiceOutcome.Conflict ->
+                    MARK_REFUSED to copy.transferMccConflict(outcome.mcc, outcome.ownerName)
                 // The transaction carries no MCC at all — the same edge case the web
                 // dropdown already has a message for.
-                is CategoryChoiceOutcome.SingleRow -> copy.singleTransactionCategorized(outcome.categoryName)
-                CategoryChoiceOutcome.NotFound -> copy.unknownTransaction
+                is CategoryChoiceOutcome.SingleRow ->
+                    MARK_APPLIED to copy.singleTransactionCategorized(outcome.categoryName)
+                CategoryChoiceOutcome.NotFound -> MARK_REFUSED to copy.unknownTransaction
                 // Unreachable via this call site (categoryId is always non-null here), but
                 // matched explicitly rather than folded into an `else` — CLAUDE.md: the
                 // sealed class exists "so no case is silently dropped."
-                CategoryChoiceOutcome.Cleared -> copy.transferNothingChanged
+                CategoryChoiceOutcome.Cleared -> MARK_REFUSED to copy.transferNothingChanged
             }
         }
         prompts.resolveById(prompt.id)
         prompt.messageId?.let { messageId ->
-            runCatching { telegram.editMessageText(chatId, messageId, message) }
+            val text = withOperation(prompt.transactionId, mark, message)
+            runCatching { telegram.editMessageText(chatId, messageId, text) }
                 .onFailure { log.warn("failed to edit prompt message {}", messageId, it.withRedactedTelegramToken()) }
         }
     }
@@ -500,6 +519,30 @@ class MccPromptService(
     private suspend fun answer(callbackQueryId: String, text: String?) {
         runCatching { telegram.answerCallbackQuery(callbackQueryId, text) }
             .onFailure { log.warn("failed to answer callback {}", callbackQueryId, it.withRedactedTelegramToken()) }
+    }
+
+    /**
+     * Opens an answered question with the operation it was about.
+     *
+     * [TelegramClient.editMessageText] replaces the whole message, so the amount and the
+     * merchant that made the question legible vanish the moment a button is pressed. A
+     * statement page answered in one sitting then reads as a column of "Пропущено." naming
+     * nothing — which is what it did. The transfer outcomes were worst: they carry no MCC
+     * either, so the bare word was the entire message.
+     *
+     * Names the recipient for a transfer, exactly as the question did — a transfer's own
+     * bank description is usually clerical ("На картку"), while the question asked about a
+     * person. [counterpartyOf] answers null for an ordinary purchase, so one code path
+     * serves both.
+     *
+     * A transaction that has since gone leaves the outcome to stand alone rather than
+     * inventing a line about it.
+     */
+    private fun withOperation(transactionId: String, mark: String, outcome: String): String {
+        val marked = "$mark $outcome"
+        val txn = transactions.byId(transactionId) ?: return marked
+        val who = counterpartyOf(txn.rawJson, txn.description)?.displayName ?: txn.description
+        return "${formatDay(txn.occurredAt)} · ${formatMinor(txn.amountMinor)} · $who\n$marked"
     }
 
     /** Adds the "seen before" line only when we actually have a key to count by. */

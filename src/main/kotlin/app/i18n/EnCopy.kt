@@ -306,6 +306,10 @@ object EnCopy : Copy {
         "$label: $spent / $limit  $pct%$mark"
     override fun statusLineNoLimit(label: String, spent: String) = "$label: $spent"
     override val noCategoriesYetStatus = "No categories yet."
+    override fun monthlyReportHeader(monthLabel: String, total: String) = "📊 Recap: $monthLabel\nTotal spent: $total"
+    override fun monthlyReportDelta(arrow: String, diff: String, signedPct: String) =
+        "$arrow $diff ($signedPct) compared with the month before"
+    override val monthlyReportExceededHeader = "Over the limit:"
     override fun budgetExceeded(category: String, limit: String, spent: String, over: String) =
         "⚠️ You've gone over on \"$category\".\n\nLimit: $limit\nSpent: $spent\nOver by: $over"
     override fun budgetWarning(pct: Int, category: String, limit: String, spent: String, left: String) =

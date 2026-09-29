@@ -23,9 +23,10 @@ import java.time.Instant
 /**
  * Raw facts about one sync, with no wording baked in — [Copy.syncSummary] turns this into
  * the sentence a person reads. `month`/`syncedAt` exist because "369 new, 0 updated"
- * told the owner nothing about *which* period that covered or *when* it ran, and the app
- * only ever syncs the current month; a person reading this must be able to tell what they
- * have without guessing.
+ * told the owner nothing about *which* period that covered or *when* it ran. Only
+ * current-month syncs are recorded (the recap's closed-month pull is not — see
+ * [SyncService.syncMonth]); a person reading this must be able to tell what they have
+ * without guessing.
  */
 data class SyncReport(
     val month: String,
@@ -144,11 +145,16 @@ class SyncService(
      * decide, not this service: the hourly background scheduler passes `true` (nobody is
      * waiting, so a busy month reconciling over a few minutes is fine); the manual
      * Settings button passes `false` (a human is holding an open HTTP request).
+     *
+     * [recordResult] = false leaves Settings' sync card alone. The card shows no month and
+     * says sync covers only the current one, so the monthly recap's pull of the month just
+     * closed must not land there — it would read as the current month's result and hide
+     * that month's own errors.
      */
     suspend fun syncCurrentMonth(waitForRateLimit: Boolean = false): SyncReport =
         syncMonth(currentMonthKey(clock), waitForRateLimit)
 
-    suspend fun syncMonth(month: String, waitForRateLimit: Boolean = false): SyncReport {
+    suspend fun syncMonth(month: String, waitForRateLimit: Boolean = false, recordResult: Boolean = true): SyncReport {
         val errors = mutableListOf<String>()
         val copy = settings.copy()
 
@@ -187,7 +193,8 @@ class SyncService(
             // perfectly good list of accounts would trade a stale balance for a whole
             // missed month.
             if (accounts.ids().isEmpty()) {
-                return recordFailure(e, SyncReport(month, 0, 0, 0, 0, errors, now()))
+                val report = SyncReport(month, 0, 0, 0, 0, errors, now())
+                return if (recordResult) recordFailure(e, report) else report
             }
         }
 
@@ -217,7 +224,8 @@ class SyncService(
             }
         }
 
-        return record(SyncReport(month, accountIds.size, inserted, updated, unchanged, errors, now()))
+        val report = SyncReport(month, accountIds.size, inserted, updated, unchanged, errors, now())
+        return if (recordResult) record(report) else report
     }
 
     /**

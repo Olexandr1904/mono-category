@@ -23,6 +23,7 @@ import app.notify.LimitPromptRepository
 import app.notify.LimitPromptService
 import app.notify.MccPromptRepository
 import app.notify.MccPromptService
+import app.notify.MonthlyReportService
 import app.notify.NotificationEventRepository
 import app.notify.Notifier
 import app.notify.TelegramUpdateHandler
@@ -159,6 +160,12 @@ fun Application.module(config: Config, db: Database) {
 
     val processor = WebhookProcessor(events, ingest)
     val sync = SyncService(mono, ingest, accounts, settings)
+    val monthlyReport = MonthlyReportService(
+        telegram, settings, budget::monthSummary,
+        syncMonth = { month ->
+            if (settings.isSet(SettingKeys.MONO_TOKEN)) sync.syncMonth(month, waitForRateLimit = true, recordResult = false)
+        },
+    )
     val limitService = LimitPromptService(limitPrompts, categories, settings, telegram) { ingest }
     val updateHandler = TelegramUpdateHandler(
         settings, telegram, budget,
@@ -255,6 +262,8 @@ fun Application.module(config: Config, db: Database) {
                 )
                 if (removed > 0) log.info("pruned {} processed webhook events", removed)
             }.onFailure { log.warn("hourly maintenance failed", it) }
+            // Its own guard: a failed current-month sync above must not also cost the 1st's recap.
+            runCatching { monthlyReport.sendIfDue() }.onFailure { log.warn("monthly recap failed", it) }
         }
     }
 }

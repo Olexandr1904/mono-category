@@ -441,4 +441,18 @@ class SyncServiceTest {
         assertEquals("token_rejected", stored.failureKind)
         assertEquals(app.i18n.UkCopy.lastSyncFailed(app.i18n.UkCopy.syncErrorTokenRejected), stored.render(app.i18n.UkCopy))
     }
+
+    /**
+     * The monthly recap pulls the month just closed. Settings' sync card shows no month and
+     * says sync covers only the current one, so a recorded closed-month result would be
+     * read as the current month's — and would hide that month's own errors.
+     */
+    @Test
+    fun `a sync that is not recorded leaves the Settings sync card alone`() = withTestDb { db ->
+        val (sync, _, _) = wire(db, FakeMonoClient())
+        runBlocking { sync.syncMonth("2026-07", recordResult = false) }
+        val settings = SettingsRepository(db, Crypto(ByteArray(32) { it.toByte() }))
+        assertEquals(null, settings.get(SettingKeys.LAST_SYNC_RESULT))
+        assertEquals(null, settings.get(SettingKeys.LAST_SYNC_AT))
+    }
 }

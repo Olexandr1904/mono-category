@@ -324,6 +324,10 @@ object UkCopy : Copy {
         "$label: $spent / $limit  $pct%$mark"
     override fun statusLineNoLimit(label: String, spent: String) = "$label: $spent"
     override val noCategoriesYetStatus = "Категорій ще нема."
+    override fun monthlyReportHeader(monthLabel: String, total: String) = "📊 Підсумки: $monthLabel\nВитрачено: $total"
+    override fun monthlyReportDelta(arrow: String, diff: String, signedPct: String) =
+        "$arrow на $diff ($signedPct) порівняно з попереднім місяцем"
+    override val monthlyReportExceededHeader = "Перевищено ліміт:"
     override fun budgetExceeded(category: String, limit: String, spent: String, over: String) =
         "⚠️ «$category» вийшла за ліміт.\n\nЛіміт: $limit\nВитрачено: $spent\nПеревитрата: $over"
     override fun budgetWarning(pct: Int, category: String, limit: String, spent: String, left: String) =

@@ -31,6 +31,9 @@ object SettingKeys {
     const val LAST_SYNC_AT = "last_sync_at"
     const val LAST_SYNC_RESULT = "last_sync_result"
 
+    /** Month key ("2026-09") of the last recap claimed by [app.notify.MonthlyReportService]. */
+    const val MONTHLY_REPORT_SENT = "monthly_report_sent"
+
     /** "uk" or "en". Missing means Ukrainian — see [app.i18n.Language.fromCode]. */
     const val LANGUAGE = "language"
 

@@ -549,6 +549,13 @@ interface Copy {
     fun statusLine(label: String, spent: String, limit: String, pct: Int, mark: String): String
     fun statusLineNoLimit(label: String, spent: String): String
     val noCategoriesYetStatus: String
+
+    /** The recap sent on the 1st: [monthLabel] is the month just closed. */
+    fun monthlyReportHeader(monthLabel: String, total: String): String
+    /** [arrow] is ↑ or ↓, [diff] an absolute amount, [signedPct] carries its own sign. */
+    fun monthlyReportDelta(arrow: String, diff: String, signedPct: String): String
+    /** Heads the recap's closing list, one overspent category per line beneath it. */
+    val monthlyReportExceededHeader: String
     fun budgetExceeded(category: String, limit: String, spent: String, over: String): String
     fun budgetWarning(pct: Int, category: String, limit: String, spent: String, left: String): String
     fun unknownMccQuestion(description: String, amount: String, mcc: Int): String
